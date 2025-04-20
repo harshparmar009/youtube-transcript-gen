@@ -24,3 +24,44 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer utilities {
+  @keyframes fade-in-out {
+    0%, 100% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    10%, 90% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-out {
+    animation: fade-in-out 2.5s ease-in-out;
+  }
+}
+
+@keyframes bounceCustom {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.loader-dot {
+  @apply w-3 h-3 bg-blue-500 rounded-full;
+  animation: bounceCustom 0.6s infinite;
+}
+
+.loader-delay-0 {
+  animation-delay: 0s;
+}
+.loader-delay-1 {
+  animation-delay: 0.15s;
+}
+.loader-delay-2 {
+  animation-delay: 0.3s;
+}

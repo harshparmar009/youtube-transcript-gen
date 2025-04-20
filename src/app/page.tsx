@@ -1,103 +1,245 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import Loader from "../components/Loader";
+import VideoPlayer from "../components/VideoPlayer";
+import { Copy, Check } from "lucide-react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  type TranscriptData = {
+    title: string;
+    keywords?: string[];
+    tracks?: {
+      transcript: {
+        start: number;
+        text: string;
+      }[];
+    }[];
+    channelId?: string;
+    id?: string;
+    microformat?: any;
+    playerMicroformatRenderer?: any;
+    category?: string;
+  };
+  const [videoUrl, setVideoUrl] = useState("");
+  const [data, setData] = useState<TranscriptData | null>(null);
+  const [summary, setSummary] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const extractVideoId = (url: string) => {
+    const match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : null;
+  };
+
+  const handleSummarize = async () => {
+    const videoId = extractVideoId(videoUrl);
+    if (!videoId) return alert("Invalid YouTube link");
+
+    setLoading(true);
+    setSummary([]);
+
+    try {
+      const transcriptRes = await fetch("/api/getTranscript", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoId }),
+      });
+
+      const transcriptData = await transcriptRes.json();
+      setData(transcriptData[0]);
+
+      // const transcriptText = transcriptData?.[0].tracks?.[0].transcript?.map((t: any) => t.text).join(' ');
+
+      const transcriptArray = transcriptData?.[0].tracks?.[0].transcript || [];
+
+      const formattedTranscript = transcriptArray.map((item: any) => {
+        const startSeconds = item.start;
+        const minutes = Math.floor(startSeconds / 60);
+        const seconds = Math.floor(startSeconds % 60)
+          .toString()
+          .padStart(2, "0");
+        const timestamp = `${minutes}:${seconds}`;
+
+        return `[${timestamp}] ${item.text}`;
+      });
+      //for summarizer logic
+      // const summaryRes = await fetch('/api/summarize', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ text: transcriptText }),
+      // });
+      // const summaryData = await summaryRes.json();
+
+      // console.log(summaryData.summary);
+
+      setSummary(formattedTranscript);
+      console.log(transcriptData);
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (timeInSecond: number): string => {
+    const minutes = Math.floor(timeInSecond / 60);
+    const seconds = timeInSecond % 60;
+    return `${minutes}m:${seconds.toString().padStart(2, "0")}s`;
+  };
+
+  const handleCopy = (value: string, label: string) => {
+    navigator.clipboard.writeText(value);
+    setCopied(label);
+    setTimeout(() => setCopied(""), 2000);
+  };
+
+  return (
+    <>
+      <main className="min-h-screen bg-black text-white px-4 py-12 flex flex-col items-center justify-center">
+        <div className="w-full max-w-3xl text-center">
+          <h1 className="text-4xl font-bold mb-4">
+            YouTube Transcript and Details Extractor
+          </h1>
+          <p className="text-gray-400 mb-8">
+            Easily convert a YouTube video to transcript, copy and download the
+            generated transcript in one click.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+            <input
+              type="text"
+              placeholder="https://youtu.be/9KVG_X_7Naw?si=xyz"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              className="w-full sm:w-3/4 bg-[#111] text-white border border-gray-700 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <button
+              onClick={handleSummarize}
+              className="w-full sm:w-1/4 bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded font-semibold transition"
+            >
+              Get Transcript
+            </button>
+          </div>
+
+          {loading && (
+            <div className="mt-6">
+              <Loader />
+            </div>
+          )}
+
         </div>
+          {data && (
+            <div className="flex items-center justify-center flex-col md:flex-row w-full max-w-5xl gap-2 ">
+              <div className="mt-10 p-4 bg-[#1a1a1a] rounded-lg text-left border border-gray-700 h-[600px] max-h-[600px] overflow-y-auto md:w-1/2">
+                <h2 className="text-xl font-semibold mb-2 text-pink-500">
+                  📄 Script Output:
+                </h2>
+                <h3 className="text-xl font-semibold mb-2 text-white w-full text-center mt-4">
+                  {data?.title || "Untitled Video"}
+                </h3>
+                {/* <p className="text-gray-300 whitespace-pre-wrap leading-relaxed ">{summary}</p> */}
+                <p className="text-white/80">
+                  {summary.map((line, index) => (
+                    <span key={index}>
+                      {line}
+                      <br />
+                    </span>
+                  ))}
+                </p>
+              </div>
+
+              <div className="mt-10 py-4 px-[4px] bg-[#1a1a1a] rounded-lg text-left border border-gray-700 h-[600px] max-h-[600px] overflow-y-auto md:w-1/2">
+                <h2 className="text-xl font-semibold mb-2 text-pink-500">
+                  📄 Video Details:
+                </h2>
+                {/* <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">{summary}</p> */}
+                <div className="flex items-center mb-4">
+                  <VideoPlayer id={data?.id} />
+                </div>
+                <div className="flex items-center justify-center w-full gap-2">
+                  <div className="border-[1px] border-white/40 rounded-2xl text-white/90 text-sm px-2 py-1 bg-white/10">
+                    {data?.microformat?.playerMicroformatRenderer?.category}
+                  </div>
+                  <div className="border-[1px] border-white/40 rounded-2xl text-white/90 text-sm px-2 py-1 bg-white/10">
+                    {formatTime(
+                      data?.microformat?.playerMicroformatRenderer
+                        ?.lengthSeconds
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center w-full flex-col">
+                  <div className="flex items-start justify-center flex-col mx-[2px] mb-6 mt-6">
+                    <div className="py-[2px] px-[6px] text-sm text-white/80 md:pl-4">
+                      Keywords:
+                    </div>
+                    <div className="flex gap-[4px] flex-wrap justify-center mt-2">
+                      {data?.keywords?.map((keyword, idx) => (
+                        <div
+                          key={idx}
+                          className="border-[1px] border-white/40 rounded-full text-white/90 text-sm px-3 py-1"
+                        >
+                          {keyword}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="relative w-full flex items-center justify-between px-6 mt-2">
+                    {/* Channel ID */}
+                    <div className="flex items-center flex-col gap-[2px] cursor-pointer">
+                      <div className="py-[2px] px-[6px] text-sm text-white/80">
+                        Channel ID:
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          data?.channelId &&
+                          handleCopy(data?.channelId, "Channel ID")
+                        }
+                        className="ml-2 flex items-center justify-center border border-white/40 rounded-lg text-white/90 text-sm px-3 py-1 hover:bg-white/10 transition cursor-pointer"
+                      >
+                        <div className="max-w-[100px] truncate ">
+                          {data?.channelId || "—"}
+                        </div>
+                        {copied === "Channel ID" ? (
+                          <Check size={18} />
+                        ) : (
+                          <Copy size={18} />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Video ID */}
+                    <div className="flex items-center flex-col gap-[2px] cursor-pointer">
+                      <div className="py-[2px] px-[6px] text-sm text-white/80">
+                        Video ID:
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          data?.id && handleCopy(data?.id, "Video ID")
+                        }
+                        className="ml-2 flex items-center justify-center border border-white/40 rounded-lg text-white/90 text-sm px-3 py-1 hover:bg-white/10 transition cursor-pointer"
+                      >
+                        <div className="max-w-[100px] truncate">
+                          {data?.id || "—"}
+                        </div>
+                        {copied === "Video ID" ? (
+                          <Check size={18} />
+                        ) : (
+                          <Copy size={18} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+    </>
   );
 }
