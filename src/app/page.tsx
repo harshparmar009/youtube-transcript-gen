@@ -63,7 +63,7 @@ export default function Home() {
 
       const transcriptArray = transcriptData?.[0].tracks?.[0].transcript as TranscriptItem[] || [];
 
-      const transcriptText = transcriptArray.map((t) => t.text).join(" ");
+      // const transcriptText = transcriptArray.map((t) => t.text).join(" ");
 
       const formattedTranscript = transcriptArray.map((item) => {
         const startSeconds = item.start;
