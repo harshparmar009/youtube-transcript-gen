@@ -6,6 +6,11 @@ import VideoPlayer from "../components/VideoPlayer";
 import { Copy, Check } from "lucide-react";
 
 export default function Home() {
+  type MicroformatRenderer = {
+    category?: string;
+    lengthSeconds?: number;
+  };
+
   type TranscriptData = {
     title: string;
     keywords?: string[];
@@ -17,13 +22,19 @@ export default function Home() {
     }[];
     channelId?: string;
     id?: string;
-    microformat?: any;
-    playerMicroformatRenderer?: any;
-    category?: string;
+    microformat?: {
+      playerMicroformatRenderer?: MicroformatRenderer;
+    };
   };
+
+  type TranscriptItem = {
+    start: number;
+    text: string;
+  };
+  
   const [videoUrl, setVideoUrl] = useState("");
   const [data, setData] = useState<TranscriptData | null>(null);
-  const [summary, setSummary] = useState([]);
+  const [summary, setSummary] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState("");
 
@@ -49,18 +60,17 @@ export default function Home() {
       const transcriptData = await transcriptRes.json();
       setData(transcriptData[0]);
 
-      // const transcriptText = transcriptData?.[0].tracks?.[0].transcript?.map((t: any) => t.text).join(' ');
 
-      const transcriptArray = transcriptData?.[0].tracks?.[0].transcript || [];
+      const transcriptArray = transcriptData?.[0].tracks?.[0].transcript as TranscriptItem[] || [];
 
-      const formattedTranscript = transcriptArray.map((item: any) => {
+      const transcriptText = transcriptArray.map((t) => t.text).join(" ");
+
+      const formattedTranscript = transcriptArray.map((item) => {
         const startSeconds = item.start;
         const minutes = Math.floor(startSeconds / 60);
-        const seconds = Math.floor(startSeconds % 60)
-          .toString()
-          .padStart(2, "0");
+        const seconds = Math.floor(startSeconds % 60).toString().padStart(2, "0");
         const timestamp = `${minutes}:${seconds}`;
-
+      
         return `[${timestamp}] ${item.text}`;
       });
       //for summarizer logic
@@ -73,8 +83,19 @@ export default function Home() {
 
       // console.log(summaryData.summary);
 
+      //fetch deepseek api
+      // const summaryRes = await fetch('/api/deepSeek', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ text: "what is your name?" }),
+      // });
+      // const summaryData = await summaryRes.json();
+      // console.log(summaryData);
+      
+
       setSummary(formattedTranscript);
       console.log(transcriptData);
+      
     } catch (err) {
       console.error(err);
       alert("Something went wrong");
@@ -83,7 +104,8 @@ export default function Home() {
     }
   };
 
-  const formatTime = (timeInSecond: number): string => {
+  const formatTime = (timeInSecond?: number): string => {
+    if (typeof timeInSecond !== "number") return "N/A";
     const minutes = Math.floor(timeInSecond / 60);
     const seconds = timeInSecond % 60;
     return `${minutes}m:${seconds.toString().padStart(2, "0")}s`;
