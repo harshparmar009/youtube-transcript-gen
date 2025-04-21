@@ -6,6 +6,7 @@ import VideoPlayer from "../components/VideoPlayer";
 import { Copy, Check } from "lucide-react";
 
 export default function Home() {
+
   type MicroformatRenderer = {
     category?: string;
     lengthSeconds?: number;
@@ -22,16 +23,15 @@ export default function Home() {
     }[];
     channelId?: string;
     id?: string;
-    microformat?: {
+     microformat?: {
       playerMicroformatRenderer?: MicroformatRenderer;
     };
+    // category?: string;
   };
-
   type TranscriptItem = {
     start: number;
     text: string;
   };
-  
   const [videoUrl, setVideoUrl] = useState("");
   const [data, setData] = useState<TranscriptData | null>(null);
   const [summary, setSummary] = useState<string[]>([]);
@@ -60,17 +60,18 @@ export default function Home() {
       const transcriptData = await transcriptRes.json();
       setData(transcriptData[0]);
 
+      // const transcriptText = transcriptData?.[0].tracks?.[0].transcript?.map((t: any) => t.text).join(' ');
 
       const transcriptArray = transcriptData?.[0].tracks?.[0].transcript as TranscriptItem[] || [];
-
-      // const transcriptText = transcriptArray.map((t) => t.text).join(" ");
 
       const formattedTranscript = transcriptArray.map((item) => {
         const startSeconds = item.start;
         const minutes = Math.floor(startSeconds / 60);
-        const seconds = Math.floor(startSeconds % 60).toString().padStart(2, "0");
+        const seconds = Math.floor(startSeconds % 60)
+          .toString()
+          .padStart(2, "0");
         const timestamp = `${minutes}:${seconds}`;
-      
+
         return `[${timestamp}] ${item.text}`;
       });
       //for summarizer logic
